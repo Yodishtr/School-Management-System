@@ -8,7 +8,21 @@
 #include <string.h>
 #define PORT 8000
 
+// Structs needed
+typedef struct student {
+    int std_number;
+    int std_age;
+    char std_name[50];
+    char std_program[5];
+} Student;
+
+// Function prototypes
 int AddStudent (int student_number, char *student_name, int student_age, char *program);
+int FindStudentId(int student_number, Student *alloc_mem);
+int FindStudentName(char *student_name, Student *mem_alloc);
+
+
+
 
 int main() {
     // setting up the server functionality
@@ -44,27 +58,72 @@ int main() {
         exit(1);
     }
 
+    // once connected: implement the connection loop to converse with client
+
     return 0;
 }
 
 // Functions:
 
 int AddStudent (int student_number, char *student_name, int student_age, char *program) {
-    // student number is 16 numbered, student name is 50 chars max, student age is 3 number max
-    // program is 3 letter
-    char stdnt_num[17];
-    char stdnt_age[4];
-    sprintf(stdnt_num, "%d", student_number);
-    sprintf(stdnt_age, "%d", student_age);
+    // returns 0 on error and 1 on success.
+
+    Student new_student;
+    new_student.std_number = student_number;
+    new_student.std_age = student_age;
+    strncpy(new_student.std_name, student_name, 50);
+    strncpy(new_student.std_program, program, 5);
+    if (strlen(student_name) >= 50) {
+        new_student.std_name[49] = '\0';
+    }
+    if (strlen(program) >= 5) {
+        new_student.std_program[4] = '\0';
+    }
 
     FILE *file_ptr;
-    file_ptr = fopen("student_record.txt", "a");
+    file_ptr = fopen("student_record.txt", "ab");
     if (file_ptr == NULL) {
         printf("Error when opening file\n");
         return 1;
     }
-    // make an array containing the string versions of the arguments then add that to the file.
-
-
+    size_t student_written = fwrite(&new_student, sizeof(Student), 1, file_ptr);
+    if (student_written != 1) {
+        perror("Error when writing to the file");
+        fclose(file_ptr);
+        return 1;
+    }
+    fclose(file_ptr);
     return 0;
+}
+
+int FindStudentId(int student_number, Student *alloc_mem) {
+    // returns 0 on success and 1 on failure
+    // stores the retrieved student data in alloc_mem which is heap memory that was pre-emptively
+    // allocated before FindStudent was called
+    FILE *file_ptr = fopen("student_record.txt", "rb");
+    if (file_ptr == NULL) {
+        perror("Error in opening the file\n");
+        return 1;
+    }
+
+    Student temp;
+    while (fread(&temp, sizeof(Student), 1, file_ptr) == 1) {
+        if (temp.std_number == student_number) {
+            *alloc_mem = temp;
+            return 0;
+        }
+    }
+    fclose(file_ptr);
+    return 1;
+}
+
+int FindStudentName(char *student_name, Student *mem_alloc) {
+    // returns 0 on success and 1 on failure
+    // mem_alloc is pointer to address allocated on heap to store correct student struct
+    FILE *file_ptr = fopen("student_record.txt", "rb");
+    if (file_ptr == NULL) {
+        perror("Error opening the file\n");
+        return 1;
+    }
+
 }
