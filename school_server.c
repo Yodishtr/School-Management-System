@@ -14,12 +14,17 @@ typedef struct student {
     int std_age;
     char std_name[50];
     char std_program[5];
+    int deleted;
 } Student;
 
 // Function prototypes
 int AddStudent (int student_number, char *student_name, int student_age, char *program);
 int FindStudentId(int student_number, Student *alloc_mem);
 int FindStudentName(char *student_name, Student *mem_alloc);
+Student *StudentsInProgram(char *program, int *student_count);
+int TotalStudents();
+int DeleteStudentById(int student_id);
+int DeleteStudentByName(char *student_name);
 
 
 
@@ -73,6 +78,7 @@ int AddStudent (int student_number, char *student_name, int student_age, char *p
     new_student.std_age = student_age;
     strncpy(new_student.std_name, student_name, 50);
     strncpy(new_student.std_program, program, 5);
+    new_student.deleted = 0;
     if (strlen(student_name) >= 50) {
         new_student.std_name[49] = '\0';
     }
@@ -81,7 +87,7 @@ int AddStudent (int student_number, char *student_name, int student_age, char *p
     }
 
     FILE *file_ptr;
-    file_ptr = fopen("student_record.txt", "ab");
+    file_ptr = fopen("student_record.dat", "ab");
     if (file_ptr == NULL) {
         printf("Error when opening file\n");
         return 1;
@@ -100,7 +106,7 @@ int FindStudentId(int student_number, Student *alloc_mem) {
     // returns 0 on success and 1 on failure
     // stores the retrieved student data in alloc_mem which is heap memory that was pre-emptively
     // allocated before FindStudent was called
-    FILE *file_ptr = fopen("student_record.txt", "rb");
+    FILE *file_ptr = fopen("student_record.dat", "rb");
     if (file_ptr == NULL) {
         perror("Error in opening the file\n");
         return 1;
@@ -108,7 +114,7 @@ int FindStudentId(int student_number, Student *alloc_mem) {
 
     Student temp;
     while (fread(&temp, sizeof(Student), 1, file_ptr) == 1) {
-        if (temp.std_number == student_number) {
+        if ((temp.std_number == student_number) && (temp.deleted != 0)) {
             *alloc_mem = temp;
             return 0;
         }
@@ -120,10 +126,85 @@ int FindStudentId(int student_number, Student *alloc_mem) {
 int FindStudentName(char *student_name, Student *mem_alloc) {
     // returns 0 on success and 1 on failure
     // mem_alloc is pointer to address allocated on heap to store correct student struct
-    FILE *file_ptr = fopen("student_record.txt", "rb");
+    FILE *file_ptr = fopen("student_record.dat", "rb");
     if (file_ptr == NULL) {
         perror("Error opening the file\n");
         return 1;
     }
-
+    Student temp;
+    while (fread(&temp, sizeof(Student), 1, file_ptr) == 1) {
+        if (strcmp(temp.std_name, student_name) == 0 && temp.deleted != 0) {
+            *mem_alloc = temp;
+            return 0;
+        }
+    }
+    fclose(file_ptr);
+    return 1;
 }
+
+Student *StudentsInProgram(char *program, int *student_count) {
+    // returns a pointer to memory on heap where the array of students in program
+    // returns NULL if no students found. sets the count to the number of students in
+    // the program. student count should have been previously initialized & its addressed passed
+    // to the function
+
+    int set_count = 0;
+    FILE *file_ptr = fopen("student_record.dat", "rb");
+    if (file_ptr == NULL) {
+        perror("Error when opening the file\n");
+        return NULL;
+    }
+    Student temp;
+    while (fread(&temp, sizeof(Student), 1, file_ptr) == 1) {
+        if (strcmp(temp.std_program, program) == 0 && temp.deleted != 0) {
+            set_count++;
+        }
+    }
+    if (set_count == 0) {
+        return NULL;
+    } else {
+        rewind(file_ptr);
+        Student *heap_ptr = (Student *)malloc(set_count * sizeof(Student));
+        if (heap_ptr == NULL) {
+            perror("Error in dynamic/heap memory allocation");
+            return NULL;
+        }
+        int i;
+        for (i = 0; i < set_count; i++) {
+            Student temp2;
+            if (fread(&temp2, sizeof(Student), 1, file_ptr) == 1) {
+                if (strcmp(temp2.std_program, program) == 0 && temp2.deleted != 0) {
+                    heap_ptr[i] = temp2;
+                }
+            }
+        }
+        *student_count = set_count;
+        fclose(file_ptr);
+        return heap_ptr;
+    }
+}
+
+int TotalStudents() {
+    // returns the total number of students
+    FILE *file_ptr = fopen("student_record.dat", "rb");
+    if (file_ptr == NULL) {
+        perror("Error in opening file\n");
+        return -1;
+    }
+    int total = 0;
+    Student some_temp;
+    while (fread(&some_temp, sizeof(Student), 1, file_ptr) == 1) {
+        if (some_temp.deleted != 0) {
+            total++;
+        }
+    }
+    return total;
+}
+
+int DeleteStudentById(int student_id) {
+    // returns 1 if deletion successful and returns 0 otherwise.
+    // change the delete flag by overwriting it at that specific position
+    // dont forget to open file in a binary read and write mode if thats possible.
+}
+
+
