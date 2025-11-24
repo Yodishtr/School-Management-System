@@ -27,6 +27,7 @@ int DeleteStudentById(int student_id);
 int DeleteStudentByName(char *student_name);
 int UpdateStudentId(int student_id, int new_student_id);
 int UpdateStudentName(char *student_name, char *new_name);
+int UpdateStudentProgram(int student_id, char *new_program);
 
 
 
@@ -67,6 +68,8 @@ int main() {
 
     // once connected: implement the connection loop to converse with client
 
+
+    close(listen_socket);
     return 0;
 }
 
@@ -118,6 +121,7 @@ int FindStudentId(int student_number, Student *alloc_mem) {
     while (fread(&temp, sizeof(Student), 1, file_ptr) == 1) {
         if ((temp.std_number == student_number) && (temp.deleted == 0)) {
             *alloc_mem = temp;
+            fclose(file_ptr);
             return 0;
         }
     }
@@ -137,6 +141,7 @@ int FindStudentName(char *student_name, Student *mem_alloc) {
     while (fread(&temp, sizeof(Student), 1, file_ptr) == 1) {
         if (strcmp(temp.std_name, student_name) == 0 && temp.deleted == 0) {
             *mem_alloc = temp;
+            fclose(file_ptr);
             return 0;
         }
     }
@@ -163,12 +168,14 @@ Student *StudentsInProgram(char *program, int *student_count) {
         }
     }
     if (set_count == 0) {
+        fclose(file_ptr);
         return NULL;
     } else {
         rewind(file_ptr);
         Student *heap_ptr = (Student *)malloc(set_count * sizeof(Student));
         if (heap_ptr == NULL) {
             perror("Error in dynamic/heap memory allocation");
+            fclose(file_ptr);
             return NULL;
         }
         int i;
@@ -200,6 +207,7 @@ int TotalStudents() {
             total++;
         }
     }
+    fclose(file_ptr);
     return total;
 }
 
@@ -227,6 +235,7 @@ int DeleteStudentById(int student_id) {
             return 0;
         } else if (temp.std_number == student_id && temp.deleted == 1) {
             printf("Student already deleted\n");
+            fclose(file_ptr);
             return 1;
         }
     }
@@ -258,6 +267,7 @@ int DeleteStudentByName(char *student_name) {
             return 0;
         } else if (strcmp(temp.std_name, student_name) == 0 && temp.deleted == 1) {
             printf("Student already deleted\n");
+            fclose(file_ptr);
             return 1;
         }
     }
@@ -287,6 +297,7 @@ int UpdateStudentId(int student_id, int new_student_id) {
             return 0;
         } else if (temp.std_number == student_id && temp.deleted == 1) {
             printf("Student could not be updated as record has been deleted\n");
+            fclose(file_ptr);
             return 1;
         }
     }
@@ -309,6 +320,53 @@ int UpdateStudentName(char *student_name, char *new_name) {
     while (fread(&temp, sizeof(Student), 1, file_ptr) == 1) {
         if (strcmp(temp.std_name, student_name) == 0 && temp.deleted == 0) {
             // copy the new name into the field for the existing student name
+            strncpy(temp.std_name, new_name, 50);
+            temp.std_name[49] = '\0';
+            fseek(file_ptr, -(sizeof(Student)), SEEK_CUR);
+            size_t modified_student = fwrite(&temp, sizeof(Student), 1, file_ptr);
+            if (modified_student == -1) {
+                perror("Error when overwriting student data\n");
+                fclose(file_ptr);
+                return 1;
+            }
+            fclose(file_ptr);
+            return 0;
+        } else if (strcmp(temp.std_name, student_name) == 0 && temp.deleted == 1) {
+            printf("Student already deleted\n");
+            fclose(file_ptr);
+            return 1;
+        }
+    }
+    fclose(file_ptr);
+    return 1;
+}
+
+int UpdateStudentProgram(int student_id, char *new_program) {
+    // return 0 on success and 1 on failure
+
+    FILE *file_ptr;
+    file_ptr = fopen("student_record.dat", "rb+");
+    if (file_ptr == NULL) {
+        perror("Error opening the file\n");
+        return 1;
+    }
+    Student temp;
+    while (fread(&temp, sizeof(Student), 1, file_ptr) == 1) {
+        if (temp.std_number == student_id && temp.deleted == 0) {
+            strncpy(temp.std_program, new_program, 5);
+            temp.std_program[4] = '\0';
+            fseek(file_ptr, -(sizeof(Student)), SEEK_CUR);
+            size_t modified_student = fwrite(&temp, sizeof(Student), 1, file_ptr);
+            if (modified_student == -1) {
+                perror("Error overwriting the student data\n");
+                fclose(file_ptr);
+                return 1;
+            }
+            fclose(file_ptr);
+            return 0;
+        } else if (temp.std_number == student_id && temp.deleted == 1) {
+            printf("Student data has already been deleted\n");
+            return 1;
         }
     }
 }
