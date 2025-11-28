@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <netinet/in.h>
 #include <string.h>
+#include <ctype.h>
 #define PORT 8000
 
 // Structs needed
@@ -17,7 +18,10 @@ typedef struct student {
     int deleted; // 0 for not deleted, 1 for deleted
 } Student;
 
-// Function prototypes
+// Server Function prototypes:
+// Code that the client will send to server to determine which function to use:
+// for e.g client will send: A, S, 1, J, O, H, N, 1, 5, C, S, C
+// first 2 to 3 elements will be server function client wants to use, next is student number, etc...
 int AddStudent (int student_number, char *student_name, int student_age, char *program);
 int FindStudentId(int student_number, Student *alloc_mem);
 int FindStudentName(char *student_name, Student *mem_alloc);
@@ -29,6 +33,67 @@ int UpdateStudentId(int student_id, int new_student_id);
 int UpdateStudentName(char *student_name, char *new_name);
 int UpdateStudentProgram(int student_id, char *new_program);
 
+// Helper Function Prototypes
+int GetServerFunction(char *client_response, char *func_code, int n); // n is length of client response
+int GetStudentNumber(char *client_response, int start_index);
+char *GetStudentName(char *client_response, int start_index);
+char *GetStudentProgram(char *client_response, int start_index); // will always assume student age is 2 elements
+
+
+int GetServerFunction(char *client_response, char *func_code, int n) {
+    // returns the ending index for the function code
+    // returns -1 if the function code is not valid
+    char temp_buff[5];
+    int i;
+    for (i = 0; i < n; i++) {
+        if (!isalpha(client_response[i])) {
+            break;
+        }
+        temp_buff[i] = client_response[i];
+    }
+    temp_buff[4] = '\0';
+    int buff_len = strlen(temp_buff);
+    if (buff_len == 0) {
+        return -1;
+    }
+    if (strcmp(temp_buff, "AS") == 0) {
+        // AddStudent Function code
+        strncpy(func_code, temp_buff, 2);
+        func_code[2] = '\0';
+
+    } else if (strcmp(temp_buff, "FSI") == 0) {
+        // FindStudentId function code
+        strncpy(func_code, temp_buff, 3);
+        func_code[3] = '\0';
+    } else if (strcmp(temp_buff, "FSN") == 0) {
+        // FindStudentName function code
+        strncpy(func_code, temp_buff, 3);
+        func_code[3] = '\0';
+    } else if (strcmp(temp_buff, "SIP") == 0) {
+        // StudentsInProgram function code
+        strncpy(func_code, temp_buff, 3);
+        func_code[3] = '\0';
+    } else if (strcmp(temp_buff, "TS") == 0) {
+        // TotalStudents function code
+        strncpy(func_code, temp_buff, 2);
+        func_code[2] = '\0';
+    } else if (strcmp(temp_buff, "DSBI") == 0) {
+        // DeleteStudentById function code
+        strncpy(func_code, temp_buff, 4);
+        func_code[4] = '\0';
+    } else if (strcmp(temp_buff, "DSBN") == 0) {
+        // DeleteStudentByName function code
+        strncpy(func_code, temp_buff, 4);
+        func_code[4] = '\0';
+    } else if (strcmp(temp_buff, "USI") == 0) {
+        // UpdateStudentId function code
+        strncpy(func_code, temp_buff, 3);
+        func_code[3] = '\0';
+    }
+
+    return i;
+
+}
 
 
 
@@ -67,7 +132,20 @@ int main() {
     }
 
     // once connected: implement the connection loop to converse with client
+    while (1) {
+        char buffer[1024];
+        char response[1024];
+        ssize_t bytes_received = read(connection, buffer, sizeof(buffer));
+        if (bytes_received == -1) {
+            perror("Error in client message\n");
+        } else if (bytes_received == 0) {
+            perror("Server disconnected. Server will close. Restart the server to continue\n");
+            return 1;
+        }
+        buffer[1023] = '\0';
 
+
+    }
 
     close(listen_socket);
     return 0;
