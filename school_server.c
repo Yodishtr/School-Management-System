@@ -21,7 +21,8 @@ typedef struct student {
 // Server Function prototypes:
 // Code that the client will send to server to determine which function to use:
 // for e.g client will send: A, S, 1, J, O, H, N, 1, 5, C, S, C
-// first 2 to 3 elements will be server function client wants to use, next is student number, etc...
+// first 2 to 4 elements will be server function client wants to use, next is student number, etc...
+// important to not have any space between the characters
 int AddStudent (int student_number, char *student_name, int student_age, char *program);
 int FindStudentId(int student_number, Student *alloc_mem);
 int FindStudentName(char *student_name, Student *mem_alloc);
@@ -34,18 +35,19 @@ int UpdateStudentName(char *student_name, char *new_name);
 int UpdateStudentProgram(int student_id, char *new_program);
 
 // Helper Function Prototypes
-int GetServerFunction(char *client_response, char *func_code, int n); // n is length of client response
-int GetStudentNumber(char *client_response, int start_index);
-char *GetStudentName(char *client_response, int start_index);
+int GetServerFunction(char *client_response, char *func_code);
+int GetStudentNumber(char *client_response, int start_index, char *student_id);
+char *GetStudentName(char *client_response, int start_index, int *next_func_start);
+int GetStudentAge(char *client_response, int start_index, int *student_age);
 char *GetStudentProgram(char *client_response, int start_index); // will always assume student age is 2 elements
 
 
-int GetServerFunction(char *client_response, char *func_code, int n) {
+int GetServerFunction(char *client_response, char *func_code) {
     // returns the ending index for the function code
     // returns -1 if the function code is not valid
     char temp_buff[5];
     int i;
-    for (i = 0; i < n; i++) {
+    for (i = 0; i < 5; i++) {
         if (!isalpha(client_response[i])) {
             break;
         }
@@ -53,7 +55,7 @@ int GetServerFunction(char *client_response, char *func_code, int n) {
     }
     temp_buff[4] = '\0';
     int buff_len = strlen(temp_buff);
-    if (buff_len == 0) {
+    if (buff_len == 0 || buff_len == 1 || buff_len > 4) {
         return -1;
     }
     if (strcmp(temp_buff, "AS") == 0) {
@@ -89,12 +91,97 @@ int GetServerFunction(char *client_response, char *func_code, int n) {
         // UpdateStudentId function code
         strncpy(func_code, temp_buff, 3);
         func_code[3] = '\0';
+    } else if (strcmp(temp_buff, "USN") == 0) {
+        //UpdateStudentName function code
+        strncpy(func_code, temp_buff, 3);
+        func_code[3] = '\0';
+    } else if (strcmp(temp_buff, "USP") == 0) {
+        // UpdateStudentProgram func code
+        strncpy(func_code, temp_buff, 3);
+        func_code[3] = '\0';
+    } else {
+        printf("Incorrect Function code provided\n");
+        return -1;
     }
 
     return i;
 
 }
 
+int GetStudentNumber(char *client_response, int start_index, char *student_id) {
+    // returns the ending index + 1 of the student number
+    // returns -1 otherwise
+    char temp_buffer[10];
+    int i;
+    int j = 0;
+    int n = start_index + 10 + 1;
+    for (i = start_index; i < n; i++) {
+        if (client_response[i] >= 0 && client_response[i] <= 9) {
+            temp_buffer[j] = client_response[i];
+            j++;
+        } else {
+            break;
+        }
+    }
+    if (j == 10) {
+        temp_buffer[j - 1] = '\0';
+    } else if (j > 0 && j < 10) {
+        temp_buffer[j] = '\0';
+    } else {
+        return -1;
+    }
+    int curr_len = strlen(temp_buffer);
+    strncpy(student_id, temp_buffer, curr_len);
+    student_id[curr_len + 1] = '\0';
+    return i;
+}
+
+char *GetStudentName(char *client_response, int start_index, int *next_func_start) {
+    // returns the name of the student
+    // returns NULL on failure
+    char *student_name = malloc(sizeof(char) * 50);
+    int i;
+    int j = 0;
+    for (i = start_index; i < start_index + 50 + 1; i++) {
+        if (!isalpha(client_response[i])) {
+            break;
+        }
+        student_name[j] = client_response[i];
+        j++;
+    }
+    student_name[j] = '\0';
+    if (strlen(student_name) == 0) {
+        return NULL;
+    }
+    *next_func_start = i;
+    return student_name;
+}
+
+int GetStudentAge(char *client_response, int start_index, int *student_age) {
+    // returns the starting index for the program
+    // returns -1 for any failures or errors
+    int i;
+    char std_age[3];
+    for (){}
+}
+
+char *GetStudentProgram(char *client_response, int start_index) {
+    // returns pointer to the string of the client response for the program
+    // returns NULL
+    char *student_program = malloc(sizeof(char) * 5);
+    int i = start_index;
+    int j = 0;
+    while (client_response[i] != '\0') {
+        student_program[j] = client_response[i];
+        i++;
+        j++;
+    }
+    student_program[j] = '\0';
+    if (strlen(student_program) == 0) {
+        return NULL;
+    }
+    return student_program;
+}
 
 
 int main() {
@@ -140,9 +227,9 @@ int main() {
             perror("Error in client message\n");
         } else if (bytes_received == 0) {
             perror("Server disconnected. Server will close. Restart the server to continue\n");
-            return 1;
+            break;
         }
-        buffer[1023] = '\0';
+        buffer[bytes_received + 1] = '\0';
 
 
     }
