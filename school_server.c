@@ -46,7 +46,12 @@ int GetServerFunction(char *client_response, char *func_code) {
         }
         temp_buff[i] = client_response[i];
     }
-    temp_buff[4] = '\0';
+    // add an if block to ensure where to put the null terminator
+    if (i == 5) {
+        temp_buff[4] = '\0';
+    } else if (i <= 4) {
+        temp_buff[i] = '\0';
+    }
     int buff_len = strlen(temp_buff);
     if (buff_len == 0 || buff_len == 1 || buff_len > 4) {
         return -1;
@@ -130,7 +135,7 @@ void handle_add_student(int connection) {
     }
     int student_id = atoi(buf);
 
-    // 2) Ask for name
+    // Ask for name
     const char *prompt_name = "Enter student name:\n";
     write(connection, prompt_name, strlen(prompt_name));
 
@@ -138,10 +143,10 @@ void handle_add_student(int connection) {
         return;
     }
     char student_name[50];
-    strncpy(student_name, buf, sizeof(student_name) - 1);
-    student_name[sizeof(student_name) - 1] = '\0';
+    strncpy(student_name, buf, 50);
+    student_name[49] = '\0';
 
-    // 3) Ask for age
+    // Ask for age
     const char *prompt_age = "Enter student age:\n";
     write(connection, prompt_age, strlen(prompt_age));
 
@@ -150,7 +155,7 @@ void handle_add_student(int connection) {
     }
     int student_age = atoi(buf);
 
-    // 4) Ask for program
+    // Ask for program
     const char *prompt_program = "Enter student program (max 4 chars):\n";
     write(connection, prompt_program, strlen(prompt_program));
 
@@ -158,10 +163,10 @@ void handle_add_student(int connection) {
         return;
     }
     char program[5];
-    strncpy(program, buf, sizeof(program) - 1);
-    program[sizeof(program) - 1] = '\0';
+    strncpy(program, buf, 5);
+    program[4] = '\0';
 
-    // 5) Now we have everything: call your existing function
+    // Now we have everything: call your existing function
     int rc = AddStudent(student_id, student_name, student_age, program);
     if (rc == 0) {
         const char *ok = "Student added successfully.\n";
@@ -198,9 +203,84 @@ void handle_find_student_id(int connection) {
     char student_name[50];
     char student_program[5];
     sprintf(student_number, "%d" ,(*mem_alloc).std_number );
+    sprintf(student_age, "%d", (*mem_alloc).std_age);
+    strncpy(student_name, (*mem_alloc).std_name, 50);
+    student_name[49] = '\0';
+    strncpy(student_program, (*mem_alloc).std_program, 5);
+    student_program[4] = '\0';
+    write(connection, student_number, strlen(student_number));
+    write(connection, student_age, strlen(student_age));
+    write(connection, student_name, strlen(student_name));
+    write(connection, student_program, strlen(student_program));
+}
+
+void handle_find_student_name(int connection) {
+    char buff[1024];
+    char prompt_name[] = "Find Student By Name Selected.\nEnter Student Name\n";
+    write(connection, prompt_name, strlen(prompt_name));
+    if (read_line(connection, buff, strlen(buff)) <= 0) {
+        return;
+    }
+    Student *curr_student = malloc(sizeof(Student));
+    int return_value = FindStudentName(buff, curr_student);
+    if (return_value == 1) {
+        char err_message[] = "Error in Opening Data File.\n";
+        write(connection, err_message, strlen(err_message));
+        free(curr_student);
+        return;
+    }
+    if (return_value == 2) {
+        char not_found_message[] = "Student not Found.\n";
+        write(connection, not_found_message, strlen(not_found_message));
+        free(curr_student);
+        return;
+    }
+    char student_number[11];
+    char student_age[3];
+    char student_name[50];
+    char student_program[5];
+    sprintf(student_number, "%d" ,(*curr_student).std_number );
+    sprintf(student_age, "%d", (*curr_student).std_age);
+    strncpy(student_name, (*curr_student).std_name, 50);
+    student_name[49] = '\0';
+    strncpy(student_program, (*curr_student).std_program, 5);
+    student_program[4] = '\0';
+    write(connection, student_number, strlen(student_number));
+    write(connection, student_age, strlen(student_age));
+    write(connection, student_name, strlen(student_name));
+    write(connection, student_program, strlen(student_program));
 
 }
 
+void handle_students_in_program(int connection) {
+    char temp_buff[1024];
+    int student_count;
+    char prompt_program[] = "Students in Program selected.\nEnter Program to check.\n";
+    write(connection, prompt_program, strlen(prompt_program));
+    if (read_line(connection, temp_buff, strlen(temp_buff)) <= 0) {
+        return;
+    }
+    Student *heap_ptr = StudentsInProgram(temp_buff, &student_count);
+    int i = 0;
+    while (i < student_count) {
+        char student_number[11];
+        char student_age[3];
+        char student_name[50];
+        sprintf(student_number, "%d", heap_ptr[i].std_number);
+        sprintf(student_age, "%d", heap_ptr[i].std_age);
+        strncpy(student_name, heap_ptr[i].std_name, 50);
+        student_name[49] = '\0';
+        char message[150];
+        strncat(message, student_number, sizeof(message) - strlen(message) - 1);
+        strncat(message, " ", sizeof(message) - strlen(message) - 1);
+        strncat(message, student_age, sizeof(message) - strlen(message) - 1);
+        strncat(message, " ", sizeof(message) - strlen(message) - 1);
+        strncat(message, student_name, sizeof(message) - strlen(message) - 1);
+        strncat(message, "\n", sizeof(message) - strlen(message) - 1);
+        write(connection, message, strlen(message));
+        i++;
+    }
+}
 
 
 int main() {
@@ -258,10 +338,11 @@ int main() {
             handle_add_student(connection);
         } else if (strcmp(func_code, "FSI") == 0) {
             handle_find_student_id(connection);
+        } else if (strcmp(func_code, "FSN") == 0) {
+            handle_find_student_name(connection);
+        } else if (strcmp(func_code, "SIP") == 0) {
+            handle_students_in_program(connection);
         }
-
-
-
 
     }
 
@@ -368,7 +449,7 @@ Student *StudentsInProgram(char *program, int *student_count) {
         return NULL;
     } else {
         rewind(file_ptr);
-        Student *heap_ptr = (Student *)malloc(set_count * sizeof(Student));
+        Student *heap_ptr = malloc(set_count * sizeof(Student));
         if (heap_ptr == NULL) {
             perror("Error in dynamic/heap memory allocation");
             fclose(file_ptr);
