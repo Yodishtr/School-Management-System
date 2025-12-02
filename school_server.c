@@ -180,6 +180,24 @@ void handle_find_student_id(int connection) {
         return;
     }
     int student_id = atoi(buff);
+    Student *mem_alloc = malloc(sizeof(Student));
+    int ret_val = FindStudentId(student_id, mem_alloc);
+    if (ret_val == 1) {
+        char error_message[] = "Error in file opening\n";
+        write(connection, error_message, strlen(error_message));
+        free(mem_alloc);
+        return;
+    } else if (ret_val == 2) {
+        char not_found_message[] = "No Student Found\n";
+        write(connection, not_found_message, strlen(not_found_message));
+        free(mem_alloc);
+        return;
+    }
+    char student_number[11];
+    char student_age[3];
+    char student_name[50];
+    char student_program[5];
+    sprintf(student_number, "%d" ,(*mem_alloc).std_number );
 
 }
 
