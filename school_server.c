@@ -34,14 +34,7 @@ int UpdateStudentId(int student_id, int new_student_id);
 int UpdateStudentName(char *student_name, char *new_name);
 int UpdateStudentProgram(int student_id, char *new_program);
 
-// Helper Function Prototypes
-int GetServerFunction(char *client_response, char *func_code);
-int GetStudentNumber(char *client_response, int start_index, char *student_id);
-char *GetStudentName(char *client_response, int start_index, int *next_func_start);
-int GetStudentAge(char *client_response, int start_index, int *student_age);
-char *GetStudentProgram(char *client_response, int start_index); // will always assume student age is 2 elements
-
-
+// Helper Functions
 int GetServerFunction(char *client_response, char *func_code) {
     // returns the ending index for the function code
     // returns -1 if the function code is not valid
@@ -108,80 +101,88 @@ int GetServerFunction(char *client_response, char *func_code) {
 
 }
 
-int GetStudentNumber(char *client_response, int start_index, char *student_id) {
-    // returns the ending index + 1 of the student number
-    // returns -1 otherwise
-    char temp_buffer[10];
-    int i;
-    int j = 0;
-    int n = start_index + 10 + 1;
-    for (i = start_index; i < n; i++) {
-        if (client_response[i] >= 0 && client_response[i] <= 9) {
-            temp_buffer[j] = client_response[i];
-            j++;
-        } else {
+ssize_t read_line(int fd, char *buf, size_t max_len) {
+    ssize_t total = 0;
+    while (total < (ssize_t)(max_len - 1)) {
+        char c;
+        ssize_t n = read(fd, &c, 1);
+        if (n == -1) {
+            return -1;
+        } else if (n == 0) {
             break;
         }
+        if (c == '\n') {
+            break;
+        }
+        buf[total++] = c;
     }
-    if (j == 10) {
-        temp_buffer[j - 1] = '\0';
-    } else if (j > 0 && j < 10) {
-        temp_buffer[j] = '\0';
+    buf[total] = '\0';
+    return total;
+}
+
+void handle_add_student(int connection) {
+    char buf[1024];
+    const char *prompt_id = "AddStudent selected.\nEnter student number:\n";
+    write(connection, prompt_id, strlen(prompt_id));
+
+    if (read_line(connection, buf, sizeof(buf)) <= 0) {
+        return;
+    }
+    int student_id = atoi(buf);
+
+    // 2) Ask for name
+    const char *prompt_name = "Enter student name:\n";
+    write(connection, prompt_name, strlen(prompt_name));
+
+    if (read_line(connection, buf, sizeof(buf)) <= 0) {
+        return;
+    }
+    char student_name[50];
+    strncpy(student_name, buf, sizeof(student_name) - 1);
+    student_name[sizeof(student_name) - 1] = '\0';
+
+    // 3) Ask for age
+    const char *prompt_age = "Enter student age:\n";
+    write(connection, prompt_age, strlen(prompt_age));
+
+    if (read_line(connection, buf, sizeof(buf)) <= 0) {
+        return;
+    }
+    int student_age = atoi(buf);
+
+    // 4) Ask for program
+    const char *prompt_program = "Enter student program (max 4 chars):\n";
+    write(connection, prompt_program, strlen(prompt_program));
+
+    if (read_line(connection, buf, sizeof(buf)) <= 0) {
+        return;
+    }
+    char program[5];
+    strncpy(program, buf, sizeof(program) - 1);
+    program[sizeof(program) - 1] = '\0';
+
+    // 5) Now we have everything: call your existing function
+    int rc = AddStudent(student_id, student_name, student_age, program);
+    if (rc == 0) {
+        const char *ok = "Student added successfully.\n";
+        write(connection, ok, strlen(ok));
     } else {
-        return -1;
+        const char *err = "Error adding student.\n";
+        write(connection, err, strlen(err));
     }
-    int curr_len = strlen(temp_buffer);
-    strncpy(student_id, temp_buffer, curr_len);
-    student_id[curr_len + 1] = '\0';
-    return i;
 }
 
-char *GetStudentName(char *client_response, int start_index, int *next_func_start) {
-    // returns the name of the student
-    // returns NULL on failure
-    char *student_name = malloc(sizeof(char) * 50);
-    int i;
-    int j = 0;
-    for (i = start_index; i < start_index + 50 + 1; i++) {
-        if (!isalpha(client_response[i])) {
-            break;
-        }
-        student_name[j] = client_response[i];
-        j++;
+void handle_find_student_id(int connection) {
+    char buff[1024];
+    char prompt_id[] = "Find Student by ID selected.\nEnter Student ID:\n";
+    write(connection, prompt_id, strlen(prompt_id));
+    if (read_line(connection, buff, sizeof(buff)) <= 0) {
+        return;
     }
-    student_name[j] = '\0';
-    if (strlen(student_name) == 0) {
-        return NULL;
-    }
-    *next_func_start = i;
-    return student_name;
+    int student_id = atoi(buff);
+
 }
 
-int GetStudentAge(char *client_response, int start_index, int *student_age) {
-    // returns the starting index for the program
-    // returns -1 for any failures or errors
-    int i;
-    char std_age[3];
-    for (){}
-}
-
-char *GetStudentProgram(char *client_response, int start_index) {
-    // returns pointer to the string of the client response for the program
-    // returns NULL
-    char *student_program = malloc(sizeof(char) * 5);
-    int i = start_index;
-    int j = 0;
-    while (client_response[i] != '\0') {
-        student_program[j] = client_response[i];
-        i++;
-        j++;
-    }
-    student_program[j] = '\0';
-    if (strlen(student_program) == 0) {
-        return NULL;
-    }
-    return student_program;
-}
 
 
 int main() {
@@ -229,7 +230,19 @@ int main() {
             perror("Server disconnected. Server will close. Restart the server to continue\n");
             break;
         }
-        buffer[bytes_received + 1] = '\0';
+        buffer[bytes_received] = '\0';
+        if (strcmp(buffer, "Q") == 0 || strcmp(buffer, "quit") == 0 || strcmp(buffer, "q") == 0) {
+            break;
+        }
+        char func_code[5];
+        GetServerFunction(buffer, func_code);
+        if (strcmp(func_code, "AS") == 0) {
+            handle_add_student(connection);
+        } else if (strcmp(func_code, "FSI") == 0) {
+            handle_find_student_id(connection);
+        }
+
+
 
 
     }
