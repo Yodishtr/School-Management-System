@@ -123,7 +123,7 @@ ssize_t read_line(int fd, char *buf, size_t max_len) {
 
 void handle_add_student(int connection) {
     char buf[1024];
-    const char *prompt_id = "AddStudent selected.\nEnter student number:\n";
+    const char *prompt_id = "AddStudent selected. Enter student number:\n";
     write(connection, prompt_id, strlen(prompt_id));
 
     if (read_line(connection, buf, sizeof(buf)) <= 0) {
@@ -175,7 +175,7 @@ void handle_add_student(int connection) {
 
 void handle_find_student_id(int connection) {
     char buff[1024];
-    char prompt_id[] = "Find Student by ID selected.\nEnter Student ID:\n";
+    char prompt_id[] = "Find Student by ID selected. Enter Student ID:\n";
     write(connection, prompt_id, strlen(prompt_id));
     if (read_line(connection, buff, sizeof(buff)) <= 0) {
         return;
@@ -194,6 +194,7 @@ void handle_find_student_id(int connection) {
         free(mem_alloc);
         return;
     }
+    char whitespace = ' ';
     char student_number[11];
     char student_age[3];
     char student_name[50];
@@ -205,16 +206,19 @@ void handle_find_student_id(int connection) {
     strncpy(student_program, (*mem_alloc).std_program, 5);
     student_program[4] = '\0';
     write(connection, student_number, strlen(student_number));
+    write(connection, &whitespace, 1);
     write(connection, student_age, strlen(student_age));
+    write(connection, &whitespace, 1);
     write(connection, student_name, strlen(student_name));
+    write(connection, &whitespace, 1);
     write(connection, student_program, strlen(student_program));
 }
 
 void handle_find_student_name(int connection) {
     char buff[1024];
-    char prompt_name[] = "Find Student By Name Selected.\nEnter Student Name\n";
+    char prompt_name[] = "Find Student By Name Selected. Enter Student Name\n";
     write(connection, prompt_name, strlen(prompt_name));
-    if (read_line(connection, buff, strlen(buff)) <= 0) {
+    if (read_line(connection, buff, sizeof(buff)) <= 0) {
         return;
     }
     Student *curr_student = malloc(sizeof(Student));
@@ -231,6 +235,8 @@ void handle_find_student_name(int connection) {
         free(curr_student);
         return;
     }
+    char whitespace = ' ';
+    char newline = '\n';
     char student_number[11];
     char student_age[3];
     char student_name[50];
@@ -242,18 +248,21 @@ void handle_find_student_name(int connection) {
     strncpy(student_program, (*curr_student).std_program, 5);
     student_program[4] = '\0';
     write(connection, student_number, strlen(student_number));
+    write(connection, &whitespace, 1);
     write(connection, student_age, strlen(student_age));
+    write(connection, &whitespace, 1);
     write(connection, student_name, strlen(student_name));
+    write(connection, &whitespace, 1);
     write(connection, student_program, strlen(student_program));
-
+    write(connection, &newline, 1);
 }
 
 void handle_students_in_program(int connection) {
     char temp_buff[1024];
     int student_count;
-    char prompt_program[] = "Students in Program selected.\nEnter Program to check.\n";
+    char prompt_program[] = "Students in Program selected. Enter Program to check.\n";
     write(connection, prompt_program, strlen(prompt_program));
-    if (read_line(connection, temp_buff, strlen(temp_buff)) <= 0) {
+    if (read_line(connection, temp_buff, sizeof(temp_buff)) <= 0) {
         return;
     }
     Student *heap_ptr = StudentsInProgram(temp_buff, &student_count);
@@ -282,7 +291,7 @@ void handle_total_students(int connection) {
     char buff[1024];
     char *message = "Total Students selected.";
     write(connection, message, strlen(message));
-    if (read_line(connection, buff, strlen(buff)) <= 0) {
+    if (read_line(connection, buff, sizeof(buff)) <= 0) {
         return;
     }
     int total_students = TotalStudents();
@@ -298,7 +307,7 @@ void handle_total_students(int connection) {
 
 void handle_delete_student_by_id(int connection) {
     char buff[1024];
-    char *prompt = "Delete Student By Id function selected.\nEnter Student ID: \n";
+    char *prompt = "Delete Student By Id function selected. Enter Student ID: \n";
     write(connection, prompt, strlen(prompt));
     if (read_line(connection, buff, sizeof(buff)) <= 0) {
         return;
@@ -306,7 +315,7 @@ void handle_delete_student_by_id(int connection) {
     int student_id = atoi(buff);
     int return_value = DeleteStudentById(student_id);
     if (return_value != 0) {
-        char *error_message = "An error occurred.\nUnable to delete student id.\n";
+        char *error_message = "An error occurred. Unable to delete student id.\n";
         write(connection, error_message, strlen(error_message));
         return;
     }
@@ -316,14 +325,14 @@ void handle_delete_student_by_id(int connection) {
 
 void handle_delete_student_by_name(int connection) {
     char buff[1024];
-    char *prompt = "Delete Student By Name selected.\nEnter Student Name: \n";
+    char *prompt = "Delete Student By Name selected. Enter Student Name: \n";
     write(connection, prompt, strlen(prompt));
     if (read_line(connection, buff, sizeof(buff)) <= 0) {
         return;
     }
     int return_value = DeleteStudentByName(buff);
     if (return_value != 0) {
-        char *error_message = "An error occurred.\nUnable to delete student record.\n";
+        char *error_message = "An error occurred. Unable to delete student record.\n";
         write(connection, error_message, strlen(error_message));
         return;
     }
@@ -334,7 +343,7 @@ void handle_delete_student_by_name(int connection) {
 void handle_update_student_id(int connection) {
     char first_response[50];
     char second_response[50];
-    char *prompt = "Update Student by Id function selected.\nEnter current student id: \n";
+    char *prompt = "Update Student by Id function selected. Enter current student id: \n";
     write(connection, prompt, strlen(prompt));
     if (read_line(connection, first_response, sizeof(first_response)) <= 0) {
         return;
@@ -348,7 +357,7 @@ void handle_update_student_id(int connection) {
     int new_student_id = atoi(second_response);
     int return_value = UpdateStudentId(old_student_id, new_student_id);
     if (return_value != 0) {
-        char *error_message = "Error occurred.\nUnable to update student record.\n";
+        char *error_message = "Error occurred. Unable to update student record.\n";
         write(connection, error_message, strlen(error_message));
         return;
     }
@@ -359,7 +368,7 @@ void handle_update_student_id(int connection) {
 void handle_update_student_name(int connection) {
     char first_response[100];
     char second_response[100];
-    char *first_prompt = "Update Student by Name function selected.\nEnter current student name: \n";
+    char *first_prompt = "Update Student by Name function selected. Enter current student name: \n";
     write(connection, first_prompt, strlen(first_prompt));
     if (read_line(connection, first_response, sizeof(first_response)) <= 0) {
         return;
@@ -371,7 +380,7 @@ void handle_update_student_name(int connection) {
     }
     int return_value = UpdateStudentName(first_response, second_response);
     if (return_value != 0) {
-        char *error_message = "An error occurred.\nUnable to update student record.\n";
+        char *error_message = "An error occurred. Unable to update student record.\n";
         write(connection, error_message, strlen(error_message));
         return;
     }
@@ -382,7 +391,7 @@ void handle_update_student_name(int connection) {
 void handle_update_student_program(int connection) {
     char first_response[50];
     char second_response[10];
-    char *prompt = "Update Student Name function selected.\nEnter Student id: \n";
+    char *prompt = "Update Student Name function selected. Enter Student id: \n";
     write(connection, prompt, strlen(prompt));
     if (read_line(connection, first_response, sizeof(first_response)) <= 0) {
         return;
@@ -395,7 +404,7 @@ void handle_update_student_program(int connection) {
     int student_id = atoi(first_response);
     int return_value = UpdateStudentProgram(student_id, second_response);
     if (return_value != 0) {
-        char *error_message = "Error occurred.\nUnable to update student program.\n";
+        char *error_message = "Error occurred. Unable to update student program.\n";
         write(connection, error_message, strlen(error_message));
         return;
     }
@@ -784,6 +793,7 @@ int UpdateStudentProgram(int student_id, char *new_program) {
             return 1;
         }
     }
+    return 1;
 }
 
 
