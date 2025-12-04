@@ -282,6 +282,131 @@ void handle_students_in_program(int connection) {
     }
 }
 
+void handle_total_students(int connection) {
+    char buff[1024];
+    char *message = "Total Students selected.";
+    write(connection, message, strlen(message));
+    if (read_line(connection, buff, strlen(buff)) <= 0) {
+        return;
+    }
+    int total_students = TotalStudents();
+    char students_pop[6];
+    sprintf(students_pop, "%d", total_students);
+    char response[150];
+    response[0] = '\0';
+    char *final_message = "Total Students at the school: ";
+    strncat(response, final_message, sizeof(response) - strlen(response) - 1);
+    strncat(response, students_pop, sizeof(response) - strlen(response) - 1);
+    write(connection, response, strlen(response));
+}
+
+void handle_delete_student_by_id(int connection) {
+    char buff[1024];
+    char *prompt = "Delete Student By Id function selected.\nEnter Student ID: \n";
+    write(connection, prompt, strlen(prompt));
+    if (read_line(connection, buff, sizeof(buff)) <= 0) {
+        return;
+    }
+    int student_id = atoi(buff);
+    int return_value = DeleteStudentById(student_id);
+    if (return_value != 0) {
+        char *error_message = "An error occurred.\nUnable to delete student id.\n";
+        write(connection, error_message, strlen(error_message));
+        return;
+    }
+    char *success_message = "Student data deleted.\n";
+    write(connection, success_message, strlen(success_message));
+}
+
+void handle_delete_student_by_name(int connection) {
+    char buff[1024];
+    char *prompt = "Delete Student By Name selected.\nEnter Student Name: \n";
+    write(connection, prompt, strlen(prompt));
+    if (read_line(connection, buff, sizeof(buff)) <= 0) {
+        return;
+    }
+    int return_value = DeleteStudentByName(buff);
+    if (return_value != 0) {
+        char *error_message = "An error occurred.\nUnable to delete student record.\n";
+        write(connection, error_message, strlen(error_message));
+        return;
+    }
+    char *success_manage = "Student data deleted.\n";
+    write(connection, success_manage, strlen(success_manage));
+}
+
+void handle_update_student_id(int connection) {
+    char first_response[50];
+    char second_response[50];
+    char *prompt = "Update Student by Id function selected.\nEnter current student id: \n";
+    write(connection, prompt, strlen(prompt));
+    if (read_line(connection, first_response, sizeof(first_response)) <= 0) {
+        return;
+    }
+    char *second_prompt = "Enter new student id: \n";
+    write(connection, second_prompt, strlen(second_prompt));
+    if (read_line(connection, second_response, sizeof(second_response)) <= 0) {
+        return;
+    }
+    int old_student_id = atoi(first_response);
+    int new_student_id = atoi(second_response);
+    int return_value = UpdateStudentId(old_student_id, new_student_id);
+    if (return_value != 0) {
+        char *error_message = "Error occurred.\nUnable to update student record.\n";
+        write(connection, error_message, strlen(error_message));
+        return;
+    }
+    char *success_message = "Student record updated.\n";
+    write(connection, success_message, strlen(success_message));
+}
+
+void handle_update_student_name(int connection) {
+    char first_response[100];
+    char second_response[100];
+    char *first_prompt = "Update Student by Name function selected.\nEnter current student name: \n";
+    write(connection, first_prompt, strlen(first_prompt));
+    if (read_line(connection, first_response, sizeof(first_response)) <= 0) {
+        return;
+    }
+    char *second_prompt = "Enter new student name: \n";
+    write(connection, second_prompt, strlen(second_prompt));
+    if (read_line(connection, second_response, sizeof(second_response)) <= 0) {
+        return;
+    }
+    int return_value = UpdateStudentName(first_response, second_response);
+    if (return_value != 0) {
+        char *error_message = "An error occurred.\nUnable to update student record.\n";
+        write(connection, error_message, strlen(error_message));
+        return;
+    }
+    char *success_message = "Student record updated.\n";
+    write(connection, success_message, strlen(success_message));
+}
+
+void handle_update_student_program(int connection) {
+    char first_response[50];
+    char second_response[10];
+    char *prompt = "Update Student Name function selected.\nEnter Student id: \n";
+    write(connection, prompt, strlen(prompt));
+    if (read_line(connection, first_response, sizeof(first_response)) <= 0) {
+        return;
+    }
+    char *second_prompt = "Enter new program: \n";
+    write(connection, second_prompt, strlen(second_prompt));
+    if (read_line(connection, second_response, sizeof(second_response)) <= 0) {
+        return;
+    }
+    int student_id = atoi(first_response);
+    int return_value = UpdateStudentProgram(student_id, second_response);
+    if (return_value != 0) {
+        char *error_message = "Error occurred.\nUnable to update student program.\n";
+        write(connection, error_message, strlen(error_message));
+        return;
+    }
+    char *success_message = "Student Record updatd.\n";
+    write(connection, success_message, strlen(success_message));
+}
+
 
 int main() {
     // setting up the server functionality
@@ -320,7 +445,7 @@ int main() {
     // once connected: implement the connection loop to converse with client
     while (1) {
         char buffer[1024];
-        char response[1024];
+        // char response[1024];
         ssize_t bytes_received = read(connection, buffer, sizeof(buffer));
         if (bytes_received == -1) {
             perror("Error in client message\n");
@@ -333,15 +458,32 @@ int main() {
             break;
         }
         char func_code[5];
-        GetServerFunction(buffer, func_code);
-        if (strcmp(func_code, "AS") == 0) {
-            handle_add_student(connection);
-        } else if (strcmp(func_code, "FSI") == 0) {
-            handle_find_student_id(connection);
-        } else if (strcmp(func_code, "FSN") == 0) {
-            handle_find_student_name(connection);
-        } else if (strcmp(func_code, "SIP") == 0) {
-            handle_students_in_program(connection);
+        int return_value = GetServerFunction(buffer, func_code);
+        if (return_value != -1){
+            if (strcmp(func_code, "AS") == 0) {
+                handle_add_student(connection);
+            } else if (strcmp(func_code, "FSI") == 0) {
+                handle_find_student_id(connection);
+            } else if (strcmp(func_code, "FSN") == 0) {
+                handle_find_student_name(connection);
+            } else if (strcmp(func_code, "SIP") == 0) {
+                handle_students_in_program(connection);
+            } else if (strcmp(func_code, "TS") == 0){
+                handle_total_students(connection);
+            } else if (strcmp(func_code, "DSBI") == 0) {
+                handle_delete_student_by_id(connection);
+            } else if (strcmp(func_code, "DSBN") == 0) {
+                handle_delete_student_by_name(connection);
+            } else if (strcmp(func_code, "USI") == 0) {
+                handle_update_student_id(connection);
+            } else if (strcmp(func_code, "USN") == 0) {
+                handle_update_student_name(connection);
+            } else if (strcmp(func_code, "USP") == 0) {
+                handle_update_student_program(connection);
+            }
+        } else {
+            char *error_message = "Incorrect function code selected.\n";
+            write(connection, error_message, strlen(error_message));
         }
 
     }
