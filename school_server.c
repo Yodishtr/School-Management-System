@@ -19,10 +19,6 @@ typedef struct student {
 } Student;
 
 // Server Function prototypes:
-// Code that the client will send to server to determine which function to use:
-// for e.g client will send: A, S, 1, J, O, H, N, 1, 5, C, S, C
-// first 2 to 4 elements will be server function client wants to use, next is student number, etc...
-// important to not have any space between the characters
 int AddStudent (int student_number, char *student_name, int student_age, char *program);
 int FindStudentId(int student_number, Student *alloc_mem);
 int FindStudentName(char *student_name, Student *mem_alloc);
@@ -492,7 +488,7 @@ int main() {
     return 0;
 }
 
-// Functions:
+// Server Functions Implementations:
 
 int AddStudent (int student_number, char *student_name, int student_age, char *program) {
     // returns 0 on error and 1 on success.
