@@ -212,6 +212,7 @@ void handle_find_student_id(int connection) {
     write(connection, student_name, strlen(student_name));
     write(connection, &whitespace, 1);
     write(connection, student_program, strlen(student_program));
+    write(connection, "\n", 1);
 }
 
 void handle_find_student_name(int connection) {
@@ -303,6 +304,7 @@ void handle_total_students(int connection) {
     strncat(response, final_message, sizeof(response) - strlen(response) - 1);
     strncat(response, students_pop, sizeof(response) - strlen(response) - 1);
     write(connection, response, strlen(response));
+    write(connection, "\n", 1);
 }
 
 void handle_delete_student_by_id(int connection) {
@@ -408,7 +410,7 @@ void handle_update_student_program(int connection) {
         write(connection, error_message, strlen(error_message));
         return;
     }
-    char *success_message = "Student Record updatd.\n";
+    char *success_message = "Student Record updated.\n";
     write(connection, success_message, strlen(success_message));
 }
 

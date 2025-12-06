@@ -72,19 +72,25 @@ int main() {
         if (strcmp(func_code, "Q") == 0 || strcmp(func_code, "q") == 0 || strcmp(func_code, "quit") == 0) {
             break;
         }
-        write();
-        printf("Server will send you prompts to answer.\n");
-        printf("If you get a success, error or result message, type b to go back to menu.\n");
-        printf("Add a newline (ie press enter) after answering the prompts");
+        write(client_socket, func_code, strlen(func_code));
+        printf("Server sending you response...\n");
+        printf("Press Enter to send your response or Q to get back to main menu.\n");
         while (1) {
-            if (read_line()){}
-            char response[1024];
-
+            char server_response[1024];
+            if (read_line(client_socket, server_response, sizeof(server_response)) <= 0) {
+                printf("Error occurred: cannot read server response. Back to menu.\n");
+                break;
+            }
+            printf("%s\n", server_response);
+            char client_response[1024];
+            scanf("%s", client_response);
+            if (strcmp(client_response, "Q") == 0) {
+                break;
+            }
+            write(client_socket, client_response, strlen(client_response));
+            write(client_socket, "\n", 1);
         }
-
-
     }
-
-
+    close(client_socket);
     return 0;
 }
